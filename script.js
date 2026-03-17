@@ -235,6 +235,9 @@ function addAutomationLog(message) {
   appState.automationLogs.unshift({ time, message });
   if (appState.automationLogs.length > 20) appState.automationLogs.pop();
   renderAutomationLogs();
+
+  // --- เพิ่มบรรทัดนี้เพื่อส่งข้อมูลไป Firebase ---
+  saveAutomationLogToFirebase(message);
 }
 
 function renderAutomationLogs() {
@@ -381,3 +384,19 @@ async function saveLightLog(actionType, detailText) {
 }
 // โหลดการทำงานเริ่มต้น
 initApp();
+// ฟังก์ชันบันทึกประวัติการทำงานอัตโนมัติลง Firebase
+async function saveAutomationLogToFirebase(message) {
+  if (!db) return;
+
+  const logEntry = {
+    message: message,           // เช่น 'สลับแหล่งพลังงานอัตโนมัติเป็นโซลาร์เซลล์'
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    await db.collection("automation_logs").add(logEntry);
+    console.log("บันทึกประวัติอัตโนมัติสำเร็จ:", message);
+  } catch (error) {
+    console.error("บันทึกประวัติอัตโนมัติล้มเหลว: ", error);
+  }
+}
