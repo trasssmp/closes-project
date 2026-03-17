@@ -1,11 +1,12 @@
 // === 1. ใส่โค้ด Firebase ของคุณตรงนี้ ===
 const firebaseConfig = {
-  apiKey: "ใส่ของคุณ",
-  authDomain: "ใส่ของคุณ",
-  projectId: "ใส่ของคุณ",
-  storageBucket: "ใส่ของคุณ",
-  messagingSenderId: "ใส่ของคุณ",
-  appId: "ใส่ของคุณ"
+  apiKey: "AIzaSyAUsdSGmT8BqlT8ZsV-o7PIJcTwPyplbf4",
+  authDomain: "closes-project.firebaseapp.com",
+  projectId: "closes-project",
+  storageBucket: "closes-project.firebasestorage.app",
+  messagingSenderId: "646932990250",
+  appId: "1:646932990250:web:d8428d9f27288b2168b653",
+  measurementId: "G-8TS484M7EX"
 };
 
 let db = null; // สร้างตัวแปรฐานข้อมูลรอไว้
