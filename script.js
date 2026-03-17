@@ -51,7 +51,7 @@ function initRooms() {
 function initApp() {
   initRooms();
   
-  // ดึงข้อมูลประวัติจาก Firebase
+  // --- ส่วนดึงข้อมูล History เดิม ---
   db.collection("history").onSnapshot((querySnapshot) => {
     const data = [];
     querySnapshot.forEach((doc) => {
@@ -62,6 +62,23 @@ function initApp() {
   }, (error) => {
     console.error("Firebase Snapshot Error:", error);
   });
+
+  // --- เพิ่มส่วนดึงข้อมูล Automation Logs จาก Firebase ---
+  if (db) {
+    db.collection("automation_logs")
+      .orderBy("timestamp", "desc")
+      .limit(10)
+      .onSnapshot((querySnapshot) => {
+        const logs = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          const time = new Date(data.timestamp).toLocaleTimeString('th-TH');
+          logs.push({ time: time, message: data.message });
+        });
+        appState.automationLogs = logs;
+        renderAutomationLogs();
+      });
+  }
 
   updateClock();
   setInterval(updateClock, 1000);
@@ -230,13 +247,14 @@ function updateScheduleTime() { appState.scheduleTime = document.getElementById(
 function updateSolarThreshold() { appState.solarThreshold = parseInt(document.getElementById('solar-threshold').value); showToast('☀️', `ตั้งค่าสลับโซลาร์เป็น ${appState.solarThreshold} kW`); }
 
 function addAutomationLog(message) {
+  // บันทึก Log ลงในแอป (หน้าจอ)
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH');
   appState.automationLogs.unshift({ time, message });
   if (appState.automationLogs.length > 20) appState.automationLogs.pop();
   renderAutomationLogs();
 
-  // --- เพิ่มบรรทัดนี้เพื่อส่งข้อมูลไป Firebase ---
+  // --- ส่งข้อมูลไปบันทึกที่ Firebase แบบถาวร ---
   saveAutomationLogToFirebase(message);
 }
 
