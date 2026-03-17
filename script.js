@@ -1,4 +1,4 @@
-// === 1. ใส่โค้ด Firebase ของคุณตรงนี้ ===
+// === 1. Firebase Configuration ===
 const firebaseConfig = {
   apiKey: "AIzaSyAUsdSGmT8BqlT8ZsV-o7PIJcTwPyplbf4",
   authDomain: "closes-project.firebaseapp.com",
@@ -12,6 +12,98 @@ const firebaseConfig = {
 // เริ่มต้น Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+
+// === 2. Auth & UI State Control ===
+
+// ติดตามสถานะการเข้าสู่ระบบ
+auth.onAuthStateChanged(user => {
+  const authUI = document.getElementById('auth-container');
+  const appUI = document.getElementById('app');
+
+  if (user) {
+    // กรณี Login แล้ว
+    authUI.classList.add('hidden');
+    appUI.classList.remove('hidden');
+    document.getElementById('user-display').textContent = `ผู้จัดการ: ${user.email}`;
+    initApp(); // รันฟังก์ชันเริ่มต้นของ Dashboard
+  } else {
+    // กรณี Logout
+    authUI.classList.remove('hidden');
+    appUI.classList.add('hidden');
+  }
+  lucide.createIcons(); // อัปเดตไอคอน Lucide
+});
+
+// ฟังก์ชันเข้าสู่ระบบ
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const pass = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+
+  btn.disabled = true;
+  btn.innerHTML = '<div class="loading-spinner"></div> กำลังตรวจสอบ...';
+
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    showToast('👤', 'เข้าสู่ระบบสำเร็จ');
+  } catch (error) {
+    alert('เกิดข้อผิดพลาด: ' + error.message);
+    btn.disabled = false;
+    btn.innerHTML = 'เข้าสู่ระบบ';
+  }
+});
+
+// ฟังก์ชันสมัครสมาชิก
+document.getElementById('signup-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('signup-email').value;
+  const pass = document.getElementById('signup-password').value;
+
+  try {
+    await auth.createUserWithEmailAndPassword(email, pass);
+    alert('สมัครสมาชิกสำเร็จ! ระบบจะเข้าสู่หน้าหลักให้ทันที');
+  } catch (error) {
+    alert('สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+  }
+});
+
+function handleLogout() {
+  auth.signOut().then(() => {
+    location.reload(); // รีโหลดเพื่อเคลียร์ค่า State
+  });
+}
+
+function showSignupForm() {
+  document.getElementById('login-view').classList.add('hidden');
+  document.getElementById('signup-view').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+function showLoginForm() {
+  document.getElementById('signup-view').classList.add('hidden');
+  document.getElementById('login-view').classList.remove('hidden');
+  lucide.createIcons();
+}
+
+// === 3. Solar Dashboard Logic (โค้ดเดิมของคุณ) ===
+
+// *** จุดสำคัญ: ปรับปรุงให้บันทึก User Email ใน Logs ***
+async function saveLightLog(actionType, detailText) {
+  if (!db || !auth.currentUser) return;
+  const logEntry = {
+    type: actionType,
+    detail: detailText,
+    user: auth.currentUser.email, // บันทึกว่าใครเป็นคนทำรายการ
+    timestamp: new Date().toISOString()
+  };
+  try {
+    await db.collection("light_logs").add(logEntry);
+  } catch (error) { console.error(error); }
+}
+
+// (นำฟังก์ชัน initRooms, initApp, render ต่างๆ มาต่อท้ายตรงนี้ได้เลย)
 
 // === 2. โค้ดการทำงานของเว็บ ===
 const defaultConfig = {
