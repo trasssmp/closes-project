@@ -1,3 +1,17 @@
+// ตั้งค่า Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyAUsdSGmT8BqlT8ZsV-o7PIJcTwPyplbf4",
+  authDomain: "closes-project.firebaseapp.com",
+  projectId: "closes-project",
+  storageBucket: "closes-project.firebasestorage.app",
+  messagingSenderId: "646932990250",
+  appId: "1:646932990250:web:d8428d9f27288b2168b653",
+  measurementId: "G-8TS484M7EX"
+};
+
+// เริ่มต้นใช้งาน Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 // Default Configuration
 const defaultConfig = {
   building_name: 'SMART BUILDING',
