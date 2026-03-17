@@ -148,19 +148,40 @@ function toggleRoom(roomId) {
   if (room) {
     room.isOn = !room.isOn; room.isForgotten = false;
     renderBlueprint();
-    showToast(room.isOn ? '💡' : '🌙', `${room.name} - ${room.isOn ? 'เปิดไฟ' : 'ปิดไฟ'}แล้ว`);
-    addAutomationLog(`${room.isOn ? 'เปิด' : 'ปิด'}ไฟ ${room.name} ชั้น ${floor}`);
+    
+    // ข้อความประวัติ
+    const detailText = `${room.isOn ? 'เปิด' : 'ปิด'}ไฟ ${room.name} ชั้น ${floor}`;
+    
+    showToast(room.isOn ? '💡' : '🌙', detailText + 'แล้ว');
+    addAutomationLog(detailText);
+    
+    // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
+    saveLightLog(room.isOn ? 'TURN_ON' : 'TURN_OFF', detailText);
   }
 }
 
 function turnAllLightsOn() {
   appState.rooms[appState.currentFloor].forEach(room => { room.isOn = true; room.isForgotten = false; });
-  renderBlueprint(); showToast('💡', `เปิดไฟทั้งหมดชั้น ${appState.currentFloor} แล้ว`);
+  renderBlueprint(); 
+  
+  const detailText = `เปิดไฟทั้งหมดชั้น ${appState.currentFloor}`;
+  showToast('💡', detailText + ` แล้ว`);
+  addAutomationLog(detailText);
+
+  // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
+  saveLightLog('ALL_ON', detailText);
 }
 
 function turnAllLightsOff() {
   appState.rooms[appState.currentFloor].forEach(room => { room.isOn = false; room.isForgotten = false; });
-  renderBlueprint(); showToast('🌙', `ปิดไฟทั้งหมดชั้น ${appState.currentFloor} แล้ว`);
+  renderBlueprint(); 
+  
+  const detailText = `ปิดไฟทั้งหมดชั้น ${appState.currentFloor}`;
+  showToast('🌙', detailText + ` แล้ว`);
+  addAutomationLog(detailText);
+
+  // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
+  saveLightLog('ALL_OFF', detailText);
 }
 
 function updateRoomStats() {
@@ -340,6 +361,23 @@ function showToast(icon, message) {
     toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('translate-y-20', 'opacity-0');
   }, 3000);
 }
+// ฟังก์ชันสำหรับส่งประวัติการเปิด-ปิดไฟเข้า Firebase
+async function saveLightLog(actionType, detailText) {
+  if (!db) return; // ถ้า Database ยังไม่พร้อมให้ข้ามไปก่อน
 
+  const logEntry = {
+    type: actionType,       // เช่น 'TURN_ON', 'TURN_OFF', 'ALL_ON'
+    detail: detailText,     // เช่น 'เปิดไฟ ออฟฟิศ A ชั้น 1'
+    timestamp: new Date().toISOString() // เวลาที่กด (ปี-เดือน-วัน T เวลา)
+  };
+
+  try {
+    // ส่งไปเก็บใน Collection ใหม่ที่ชื่อว่า "light_logs"
+    await db.collection("light_logs").add(logEntry);
+    console.log("บันทึกประวัติไฟสำเร็จ:", detailText);
+  } catch (error) {
+    console.error("บันทึกประวัติไฟล้มเหลว: ", error);
+  }
+}
 // โหลดการทำงานเริ่มต้น
 initApp();
