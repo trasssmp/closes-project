@@ -9,12 +9,14 @@ const firebaseConfig = {
   measurementId: "G-8TS484M7EX"
 };
 
-let db = null; // สร้างตัวแปรฐานข้อมูลรอไว้
+let db = null;
+let auth = null; // 👈 เพิ่มตัวแปร auth เตรียมไว้สำหรับ Login
 
 // ใช้ try...catch ดักจับ Error ไม่ให้เว็บพัง
 try {
   firebase.initializeApp(firebaseConfig);
   db = firebase.firestore();
+  auth = firebase.auth(); // 👈 เปิดใช้งานระบบ Login
   console.log("🔥 Firebase เชื่อมต่อสำเร็จ!");
 } catch (error) {
   console.error("❌ Firebase เชื่อมต่อไม่ได้ (เช็ค Config):", error);
@@ -394,6 +396,52 @@ async function saveLightLog(actionType, detailText) {
   } catch (error) {
     console.error("บันทึกประวัติไฟล้มเหลว: ", error);
   }
+}
+// ==========================================
+// ระบบ Login / Logout
+// ==========================================
+async function handleLogin() {
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  
+  if(!email || !password) {
+    showToast('⚠️', 'กรุณากรอกอีเมลและรหัสผ่าน');
+    return;
+  }
+
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    showToast('✅', 'เข้าสู่ระบบสำเร็จ!');
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+  } catch (error) {
+    console.error(error);
+    showToast('❌', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+  }
+}
+
+function handleLogout() {
+  if(auth) {
+    auth.signOut();
+    showToast('👋', 'ออกจากระบบเรียบร้อย');
+  }
+}
+
+// ตัวตรวจสอบว่าใคร Login อยู่
+if (auth) {
+  auth.onAuthStateChanged((user) => {
+    const loginScreen = document.getElementById('login-screen');
+    // ตรวจสอบว่ามีหน้าต่าง login-screen ใน HTML หรือยัง
+    if (loginScreen) {
+      if (user) {
+        // ล็อคอินแล้ว -> ซ่อนหน้า Login
+        loginScreen.classList.add('opacity-0', 'pointer-events-none');
+      } else {
+        // ยังไม่ล็อคอิน -> โชว์หน้า Login บังเว็บไว้
+        loginScreen.classList.remove('opacity-0', 'pointer-events-none');
+      }
+    }
+  });
 }
 // โหลดการทำงานเริ่มต้น
 initApp();
