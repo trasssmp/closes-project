@@ -4,40 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Solar Building Management System</title>
+  
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="h-full bg-slate-950 text-white overflow-auto">
-
-  <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 backdrop-blur-md transition-all duration-500">
-    <div class="glass p-8 rounded-2xl neon-border max-w-sm w-full mx-4">
-      <div class="text-4xl text-center mb-2">🔐</div>
-      <h2 id="auth-title" class="orbitron text-2xl font-bold text-emerald-400 mb-6 text-center">ADMIN LOGIN</h2>
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm text-slate-400 mb-1">อีเมล</label>
-          <input type="email" id="auth-email" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 outline-none">
-        </div>
-        <div>
-          <label class="block text-sm text-slate-400 mb-1">รหัสผ่าน</label>
-          <input type="password" id="auth-password" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:border-emerald-500 outline-none">
-        </div>
-        <div id="login-group" class="space-y-3">
-          <button onclick="handleLogin()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold hover:opacity-90">เข้าสู่ระบบ</button>
-          <p class="text-center text-sm text-slate-400">ยังไม่มีบัญชี? <a href="javascript:void(0)" onclick="toggleAuthMode(true)" class="text-emerald-400 underline">สมัครสมาชิก</a></p>
-        </div>
-        <div id="register-group" class="hidden space-y-3">
-          <button onclick="handleRegister()" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold hover:opacity-90">ยืนยันการสมัคร</button>
-          <p class="text-center text-sm text-slate-400">มีบัญชีอยู่แล้ว? <a href="javascript:void(0)" onclick="toggleAuthMode(false)" class="text-emerald-400 underline">ไปหน้าล็อคอิน</a></p>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div id="app" class="min-h-full w-full">
     <header class="glass sticky top-0 z-50 px-6 py-4">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
@@ -55,7 +31,6 @@
             <div id="status-dot" class="w-3 h-3 rounded-full bg-emerald-500 blink"></div><span id="status-text" class="text-sm text-emerald-400">ระบบทำงานปกติ</span>
           </div>
           <div class="orbitron text-lg text-slate-300" id="current-time">--:--:--</div>
-          <button onclick="handleLogout()" class="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/50 hover:bg-red-500/30 text-sm ml-4">ออกจากระบบ</button>
         </div>
       </div>
     </header>
@@ -79,7 +54,6 @@
             <div id="solar-indicator" class="text-center p-4 rounded-xl border-2 border-yellow-500 bg-yellow-500/10">
               <div class="text-4xl mb-2">☀️</div>
               <div class="font-semibold text-yellow-400">โซลาร์เซลล์</div>
-              <div class="text-xs text-slate-400">พลังงานสะอาด</div>
             </div>
             <button onclick="toggleEnergySource()" id="energy-toggle" class="relative w-24 h-12 rounded-full bg-yellow-500 transition-all duration-500 shadow-lg shadow-yellow-500/50">
               <div id="toggle-knob" class="absolute top-1 left-1 w-10 h-10 rounded-full bg-white shadow-lg transition-all duration-500 flex items-center justify-center"><span class="text-xl">☀️</span></div>
@@ -87,54 +61,30 @@
             <div id="grid-indicator" class="text-center p-4 rounded-xl border-2 border-slate-600 bg-slate-800/50 opacity-50">
               <div class="text-4xl mb-2">🏭</div>
               <div class="font-semibold text-slate-400">ไฟฟ้าจากรัฐ</div>
-              <div class="text-xs text-slate-500">การไฟฟ้า</div>
             </div>
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div class="glass rounded-2xl p-5 neon-border">
-            <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">พลังงานโซลาร์วันนี้</span> <span class="text-2xl">☀️</span></div>
-            <div class="orbitron text-3xl font-bold text-yellow-400" id="solar-today">0.00</div>
-            <div class="text-sm text-slate-500">kWh</div>
+            <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">โซลาร์วันนี้</span> <span class="text-2xl">☀️</span></div>
+            <div class="orbitron text-2xl font-bold text-yellow-400" id="solar-today">0.00</div>
+            <div class="text-xs text-slate-500">kWh</div>
           </div>
           <div class="glass rounded-2xl p-5 neon-border">
-            <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">การใช้ไฟวันนี้</span> <span class="text-2xl">⚡</span></div>
-            <div class="orbitron text-3xl font-bold text-emerald-400" id="usage-today">0.00</div>
-            <div class="text-sm text-slate-500">kWh</div>
+            <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">การใช้ไฟ</span> <span class="text-2xl">⚡</span></div>
+            <div class="orbitron text-2xl font-bold text-emerald-400" id="usage-today">0.00</div>
+            <div class="text-xs text-slate-500">kWh</div>
           </div>
           <div class="glass rounded-2xl p-5 neon-border">
             <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">ค่าไฟวันนี้</span> <span class="text-2xl">💰</span></div>
-            <div class="orbitron text-3xl font-bold text-cyan-400" id="cost-today">0.00</div>
-            <div class="text-sm text-slate-500">บาท</div>
+            <div class="orbitron text-2xl font-bold text-cyan-400" id="cost-today">0.00</div>
+            <div class="text-xs text-slate-500">บาท</div>
           </div>
           <div class="glass rounded-2xl p-5 neon-border">
             <div class="flex items-center justify-between mb-3"><span class="text-slate-400 text-sm">ประหยัดได้</span> <span class="text-2xl">💚</span></div>
-            <div class="orbitron text-3xl font-bold text-emerald-400" id="savings-today">0.00</div>
-            <div class="text-sm text-slate-500">บาท</div>
-          </div>
-        </div>
-
-        <div class="glass rounded-2xl p-6 neon-border">
-          <h2 class="text-lg font-semibold text-emerald-400 mb-6">⚡ การไหลของพลังงาน (Real-time)</h2>
-          <div class="flex items-center justify-between">
-            <div class="text-center">
-              <div class="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center mx-auto mb-2 pulse-glow" style="box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);"><span class="text-4xl">☀️</span></div>
-              <div class="font-medium text-yellow-400">โซลาร์แพเนล</div>
-              <div class="orbitron text-xl text-white" id="solar-power">4.2 kW</div>
-            </div>
-            <div class="flex-1 mx-4 h-3 rounded-full solar-flow"></div>
-            <div class="text-center">
-              <div class="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-2 pulse-glow"><span class="text-4xl">🔋</span></div>
-              <div class="font-medium text-emerald-400">แบตเตอรี่</div>
-              <div class="orbitron text-xl text-white" id="battery-level">85%</div>
-            </div>
-            <div class="flex-1 mx-4 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"></div>
-            <div class="text-center">
-              <div class="w-20 h-20 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto mb-2"><span class="text-4xl">🏢</span></div>
-              <div class="font-medium text-cyan-400">อาคาร</div>
-              <div class="orbitron text-xl text-white" id="building-usage">3.8 kW</div>
-            </div>
+            <div class="orbitron text-2xl font-bold text-emerald-400" id="savings-today">0.00</div>
+            <div class="text-xs text-slate-500">บาท</div>
           </div>
         </div>
       </section>
@@ -144,8 +94,8 @@
           <div class="flex items-center justify-between mb-6">
             <h2 class="text-lg font-semibold text-emerald-400">🏢 แผนผังอาคาร - ควบคุมไฟ</h2>
             <div class="flex gap-2">
-              <button onclick="turnAllLightsOn()" class="px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 hover:bg-yellow-500/30"> 💡 เปิดทั้งหมด </button> 
-              <button onclick="turnAllLightsOff()" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600"> 🌙 ปิดทั้งหมด </button>
+              <button onclick="turnAllLightsOn()" class="px-4 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 hover:bg-yellow-500/30 transition-all text-sm">💡 เปิดทั้งหมด</button> 
+              <button onclick="turnAllLightsOff()" class="px-4 py-2 rounded-lg bg-slate-700 text-slate-300 border border-slate-600 hover:bg-slate-600 transition-all text-sm">🌙 ปิดทั้งหมด</button>
             </div>
           </div>
           <div class="flex gap-2 mb-6 overflow-x-auto pb-2">
@@ -156,7 +106,7 @@
             <button onclick="selectFloor(5)" id="floor-5" class="floor-btn px-4 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700">ชั้น 5</button>
           </div>
           <div class="grid-pattern rounded-xl p-6 bg-slate-900/50 border border-slate-700">
-            <div id="blueprint-grid" class="grid grid-cols-4 gap-4"></div>
+            <div id="blueprint-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
           </div>
         </div>
       </section>
@@ -164,29 +114,29 @@
       <section id="content-history" class="tab-content hidden space-y-6">
         <div class="glass rounded-2xl p-6 neon-border">
           <h2 class="text-lg font-semibold text-emerald-400 mb-6">📜 ประวัติการใช้ไฟฟ้า</h2>
-          <div id="history-summary" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="p-4 bg-slate-800/50 rounded-lg text-center">
-              <div class="text-slate-400 text-sm">พลังงานโซลาร์รวม</div>
-              <div class="orbitron text-2xl text-yellow-400" id="total-solar">0 kWh</div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="p-4 bg-slate-800/50 rounded-lg text-center border border-slate-700">
+              <div class="text-slate-400 text-xs">โซลาร์รวม</div>
+              <div class="orbitron text-xl text-yellow-400" id="total-solar">0 kWh</div>
             </div>
-            <div class="p-4 bg-slate-800/50 rounded-lg text-center">
-              <div class="text-slate-400 text-sm">ค่าใช้จ่ายรวม</div>
-              <div class="orbitron text-2xl text-red-400" id="total-cost">0 บาท</div>
+            <div class="p-4 bg-slate-800/50 rounded-lg text-center border border-slate-700">
+              <div class="text-slate-400 text-xs">ค่าใช้จ่ายรวม</div>
+              <div class="orbitron text-xl text-red-400" id="total-cost">0 บาท</div>
             </div>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="border-b border-slate-700">
-                <tr>
-                  <th class="text-left py-3 px-4 text-slate-400">วันที่</th>
-                  <th class="text-right py-3 px-4 text-slate-400">โซลาร์ (kWh)</th>
-                  <th class="text-right py-3 px-4 text-slate-400">ค่าไฟ</th>
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-slate-700">
+                  <th class="text-left py-3 px-4 text-slate-400 font-medium">วันที่</th>
+                  <th class="text-right py-3 px-4 text-slate-400 font-medium">โซลาร์ (kWh)</th>
+                  <th class="text-right py-3 px-4 text-slate-400 font-medium">ค่าใช้จ่าย</th>
                 </tr>
               </thead>
               <tbody id="history-table"></tbody>
             </table>
           </div>
-          <button onclick="saveCurrentRecord()" id="save-btn" class="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold"> 💾 บันทึกข้อมูลวันนี้ </button>
+          <button onclick="saveCurrentRecord()" id="save-btn" class="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold hover:opacity-90 transition-all"> 💾 บันทึกข้อมูลวันนี้ </button>
         </div>
       </section>
     </main>
