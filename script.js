@@ -9,100 +9,66 @@ const firebaseConfig = {
   measurementId: "G-8TS484M7EX"
 };
 
-// Global Variables
+// Global Variables (ประกาศไว้บนสุดเพื่อให้ทุกฟังก์ชันเข้าถึงได้)
 let db = null;
 let auth = null;
-
-// === 2. Auth Functions (ต้องอยู่บนสุดเพื่อความไว) ===
-function toggleAuthMode(isRegister) {
-  document.getElementById('auth-title').innerText = isRegister ? 'REGISTER' : 'ADMIN LOGIN';
-  document.getElementById('login-group').classList.toggle('hidden', isRegister);
-  document.getElementById('register-group').classList.toggle('hidden', !isRegister);
-}
-
-async function handleRegister() {
-  const email = document.getElementById('auth-email').value;
-  const password = document.getElementById('auth-password').value;
-  if(password.length < 6) return showToast('⚠️', 'รหัสผ่านต้อง 6 ตัวขึ้นไป');
-
-  try {
-    await auth.createUserWithEmailAndPassword(email, password);
-    showToast('✅', 'สมัครสมาชิกสำเร็จ!');
-  } catch (error) {
-    showToast('❌', 'ผิดพลาด: ' + error.message);
-  }
-}
-
-async function handleLogin() {
-  const email = document.getElementById('auth-email').value;
-  const password = document.getElementById('auth-password').value;
-  if(!email || !password) return showToast('⚠️', 'กรุณากรอกข้อมูลให้ครบ');
-
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-    showToast('✅', 'เข้าสู่ระบบสำเร็จ!');
-  } catch (error) {
-    showToast('❌', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-  }
-}
-
-function handleLogout() {
-  if(auth) auth.signOut().then(() => showToast('👋', 'ออกจากระบบแล้ว'));
-}
-
-// === 3. Application State & UI Logic ===
 const defaultConfig = { building_name: 'SMART BUILDING', electricity_rate: '4.50' };
+
 let appState = {
-  usingSolar: true, currentFloor: 1, rooms: {},
+  usingSolar: true, 
+  currentFloor: 1, 
+  rooms: {},
   automationSettings: { motion: true, schedule: true, solar: true, alert: true },
-  automationLogs: [], historyData: [],
+  historyData: [],
   todayStats: { solarKwh: 28.5, gridKwh: 12.3, totalCost: 55.35, solarSavings: 128.25 }
 };
 
-// Initialize Firebase & App
-try {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  auth = firebase.auth();
-
-  auth.onAuthStateChanged((user) => {
-    const screen = document.getElementById('login-screen');
-    if (user) {
-      screen.classList.add('opacity-0', 'pointer-events-none');
-      initApp(); // เริ่มโหลดข้อมูลเมื่อ Login แล้ว
-    } else {
-      screen.classList.remove('opacity-0', 'pointer-events-none');
-    }
-  });
-} catch (e) { console.error("Firebase Error", e); }
-
-function initApp() {
-  initRooms();
-  updateClock();
-  setInterval(updateClock, 1000);
-  renderBlueprint();
-  renderSolarPanels();
-  updateDashboardStats();
-  setInterval(simulateRealTimeUpdates, 5000);
-
-  // Load Data from Firebase
-  if(db) {
-    db.collection("history").orderBy("date", "desc").onSnapshot(snap => {
-      appState.historyData = snap.docs.map(doc => doc.data());
-      renderHistory();
-    });
-  }
-}
-
-// UI Functions (Switch Tab, Toggle Room, etc.)
+// === 2. ฟังก์ชันพื้นฐาน (Switch Tab, Toggle Room) - ต้องโหลดก่อนเสมอ ===
 function switchTab(tabName) {
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-  document.querySelectorAll('.tab-btn').forEach(el => {
+  const contents = document.querySelectorAll('.tab-content');
+  const buttons = document.querySelectorAll('.tab-btn');
+  
+  contents.forEach(el => el.classList.add('hidden'));
+  buttons.forEach(el => {
     el.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
     el.classList.add('bg-slate-800/50', 'text-slate-400', 'border-slate-700');
   });
-  document.getElementById(`content-${tabName}`).classList.remove('hidden');
-  document.getElementById(`tab-${tabName}`).classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+
+  const targetContent = document.getElementById(`content-${tabName}`);
+  const targetButton = document.getElementById(`tab-${tabName}`);
+  
+  if(targetContent) targetContent.classList.remove('hidden');
+  if(targetButton) targetButton.classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+}
+
+function toggleEnergySource() {
+  appState.usingSolar = !appState.usingSolar;
+  const toggle = document.getElementById('energy-toggle');
+  const knob = document.getElementById('toggle-knob');
+  const sourceLabel = document.getElementById('source-label');
+  
+  if (appState.usingSolar) {
+    toggle.classList.replace('bg-blue-500', 'bg-yellow-500');
+    knob.style.left = '4px'; knob.innerHTML = '☀️';
+    sourceLabel.textContent = 'กำลังใช้: โซลาร์เซลล์';
+  } else {
+    toggle.classList.replace('bg-yellow-500', 'bg-blue-500');
+    knob.style.left = 'calc(100% - 44px)'; knob.innerHTML = '🏭';
+    sourceLabel.textContent = 'กำลังใช้: ไฟฟ้าจากรัฐ';
+  }
+}
+
+function selectFloor(floor) {
+  appState.currentFloor = floor;
+  const buttons = document.querySelectorAll('.floor-btn');
+  buttons.forEach((btn, idx) => {
+    if (idx + 1 === floor) {
+      btn.className = "floor-btn px-4 py-2 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/50";
+    } else {
+      btn.className = "floor-btn px-4 py-2 rounded-lg bg-slate-800 text-slate-400 border border-slate-700";
+    }
+  });
+  renderBlueprint();
 }
 
 function initRooms() {
@@ -114,7 +80,8 @@ function initRooms() {
 
 function renderBlueprint() {
   const grid = document.getElementById('blueprint-grid');
-  const rooms = appState.rooms[appState.currentFloor];
+  if(!grid) return;
+  const rooms = appState.rooms[appState.currentFloor] || [];
   grid.innerHTML = rooms.map(room => `
     <div class="room p-4 rounded-xl border-2 ${room.isOn ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-slate-700 bg-slate-800/50'} cursor-pointer" onclick="toggleRoom('${room.id}')">
       <div class="flex items-center justify-between mb-3">
@@ -124,7 +91,6 @@ function renderBlueprint() {
       <span class="text-xs text-slate-500">${room.power}W</span>
     </div>
   `).join('');
-  updateRoomStats();
 }
 
 function toggleRoom(roomId) {
@@ -133,41 +99,99 @@ function toggleRoom(roomId) {
   if (room) {
     room.isOn = !room.isOn;
     renderBlueprint();
-    saveLightLog(room.isOn ? 'ON' : 'OFF', `${room.isOn ? 'เปิด' : 'ปิด'}ไฟ ${room.name} ชั้น ${floor}`);
+    if(db) db.collection("light_logs").add({ type: room.isOn?'ON':'OFF', detail: `เปลี่ยนสถานะ ${room.name} ชั้น ${floor}`, timestamp: new Date().toISOString() });
   }
 }
 
-async function saveLightLog(type, detail) {
-  if(db) await db.collection("light_logs").add({ type, detail, timestamp: new Date().toISOString() });
+// === 3. Auth & Login Logic ===
+function toggleAuthMode(isRegister) {
+  document.getElementById('auth-title').innerText = isRegister ? 'REGISTER' : 'ADMIN LOGIN';
+  document.getElementById('login-group').classList.toggle('hidden', isRegister);
+  document.getElementById('register-group').classList.toggle('hidden', !isRegister);
 }
 
-async function saveCurrentRecord() {
-  if(!db) return;
-  const record = { date: new Date().toISOString(), solar_kwh: appState.todayStats.solarKwh, total_cost: appState.todayStats.totalCost };
-  await db.collection("history").add(record);
-  showToast('✅', 'บันทึกสำเร็จ');
+async function handleRegister() {
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  try {
+    await auth.createUserWithEmailAndPassword(email, password);
+    showToast('✅', 'สมัครสมาชิกสำเร็จ!');
+  } catch (e) { showToast('❌', e.message); }
 }
 
-// Utility Functions
-function updateClock() { document.getElementById('current-time').textContent = new Date().toLocaleTimeString('th-TH'); }
+async function handleLogin() {
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    showToast('✅', 'เข้าสู่ระบบสำเร็จ!');
+  } catch (e) { showToast('❌', 'อีเมลหรือรหัสผ่านผิด'); }
+}
+
+function handleLogout() { if(auth) auth.signOut(); }
+
+// === 4. Initialization (หัวใจหลักของระบบ) ===
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  auth = firebase.auth();
+
+  // เช็คสถานะ Login
+  auth.onAuthStateChanged((user) => {
+    const screen = document.getElementById('login-screen');
+    if (user) {
+      screen.classList.add('opacity-0', 'pointer-events-none');
+      startSystem(); // เริ่มระบบแสดงผลเมื่อล็อคอินแล้ว
+    } else {
+      screen.classList.remove('opacity-0', 'pointer-events-none');
+    }
+  });
+} catch (e) { console.error(e); }
+
+function startSystem() {
+  initRooms();
+  renderBlueprint();
+  renderSolarPanels();
+  updateDashboardStats();
+  
+  // โหลดประวัติจาก Firebase
+  db.collection("history").orderBy("date", "desc").limit(10).onSnapshot(snap => {
+    appState.historyData = snap.docs.map(doc => doc.data());
+    renderHistory();
+  });
+
+  // นาฬิกาและจำลอง Real-time
+  setInterval(() => {
+    document.getElementById('current-time').textContent = new Date().toLocaleTimeString('th-TH');
+  }, 1000);
+  
+  setInterval(() => {
+    appState.todayStats.solarKwh += 0.001;
+    updateDashboardStats();
+  }, 5000);
+}
+
+// Utility
 function showToast(icon, msg) {
   const t = document.getElementById('toast');
   document.getElementById('toast-icon').textContent = icon;
   document.getElementById('toast-message').textContent = msg;
-  t.classList.remove('translate-y-20', 'opacity-0');
-  setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+  t.classList.replace('translate-y-20', 'translate-y-0');
+  t.classList.replace('opacity-0', 'opacity-100');
+  setTimeout(() => {
+    t.classList.replace('translate-y-0', 'translate-y-20');
+    t.classList.replace('opacity-100', 'opacity-0');
+  }, 3000);
 }
 
-// ส่วนอื่นๆ ที่เหลือ (Stats, Automation Logs, History Render) สามารถใส่ต่อท้ายได้ปกติครับ
 function updateDashboardStats() {
   document.getElementById('solar-today').textContent = appState.todayStats.solarKwh.toFixed(2);
-  document.getElementById('usage-today').textContent = (appState.todayStats.solarKwh + appState.todayStats.gridKwh).toFixed(2);
-  document.getElementById('cost-today').textContent = appState.todayStats.totalCost.toFixed(2);
-  document.getElementById('savings-today').textContent = appState.todayStats.solarSavings.toFixed(2);
+  document.getElementById('usage-today').textContent = (appState.todayStats.solarKwh + 12.3).toFixed(2);
 }
 
 function renderHistory() {
   const table = document.getElementById('history-table');
+  if(!table) return;
   table.innerHTML = appState.historyData.map(r => `
     <tr class="border-b border-slate-800">
       <td class="py-3 px-4">${new Date(r.date).toLocaleDateString('th-TH')}</td>
@@ -177,23 +201,12 @@ function renderHistory() {
   `).join('');
 }
 
-function updateRoomStats() {
-  let on = 0, p = 0;
-  Object.values(appState.rooms).forEach(f => f.forEach(r => { if(r.isOn) { on++; p += r.power; } }));
-  document.getElementById('lights-on-count').textContent = on;
-  document.getElementById('current-power').textContent = p + ' W';
-}
-
 function renderSolarPanels() {
   const container = document.getElementById('solar-panels');
+  if(!container) return;
   let html = '';
   for (let i = 1; i <= 9; i++) {
     html += `<div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center"><div class="text-2xl">☀️</div><div class="text-xs">แผง ${i}</div></div>`;
   }
   container.innerHTML = html;
-}
-
-function simulateRealTimeUpdates() {
-  appState.todayStats.solarKwh += 0.01;
-  updateDashboardStats();
 }
