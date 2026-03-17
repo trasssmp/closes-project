@@ -422,7 +422,7 @@ function renderHistory() {
   document.getElementById('total-savings').textContent = `${totalSavings.toFixed(0)} บาท`;
 }
 
-// Save Current Record
+// ต้องมีคำว่า async นำหน้าตรงนี้นะครับ 👇
 async function saveCurrentRecord() {
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
@@ -439,7 +439,6 @@ async function saveCurrentRecord() {
   };
 
   try {
-    // ส่งข้อมูลไปบันทึกที่ Firebase ในห้องที่ชื่อว่า "history"
     await db.collection("history").add(record);
     showToast('✅', 'บันทึกข้อมูลลง Firebase สำเร็จ!');
     addAutomationLog('บันทึกข้อมูลการใช้ไฟฟ้าลงฐานข้อมูล');
