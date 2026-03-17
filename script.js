@@ -51,7 +51,7 @@ function initRooms() {
 function initApp() {
   initRooms();
   
-  // --- ส่วนดึงข้อมูล History เดิม ---
+  // ดึงข้อมูลประวัติจาก Firebase
   db.collection("history").onSnapshot((querySnapshot) => {
     const data = [];
     querySnapshot.forEach((doc) => {
@@ -62,23 +62,6 @@ function initApp() {
   }, (error) => {
     console.error("Firebase Snapshot Error:", error);
   });
-
-  // --- เพิ่มส่วนดึงข้อมูล Automation Logs จาก Firebase ---
-  if (db) {
-    db.collection("automation_logs")
-      .orderBy("timestamp", "desc")
-      .limit(10)
-      .onSnapshot((querySnapshot) => {
-        const logs = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const time = new Date(data.timestamp).toLocaleTimeString('th-TH');
-          logs.push({ time: time, message: data.message });
-        });
-        appState.automationLogs = logs;
-        renderAutomationLogs();
-      });
-  }
 
   updateClock();
   setInterval(updateClock, 1000);
@@ -247,15 +230,11 @@ function updateScheduleTime() { appState.scheduleTime = document.getElementById(
 function updateSolarThreshold() { appState.solarThreshold = parseInt(document.getElementById('solar-threshold').value); showToast('☀️', `ตั้งค่าสลับโซลาร์เป็น ${appState.solarThreshold} kW`); }
 
 function addAutomationLog(message) {
-  // บันทึก Log ลงในแอป (หน้าจอ)
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH');
   appState.automationLogs.unshift({ time, message });
   if (appState.automationLogs.length > 20) appState.automationLogs.pop();
   renderAutomationLogs();
-
-  // --- ส่งข้อมูลไปบันทึกที่ Firebase แบบถาวร ---
-  saveAutomationLogToFirebase(message);
 }
 
 function renderAutomationLogs() {
@@ -402,19 +381,3 @@ async function saveLightLog(actionType, detailText) {
 }
 // โหลดการทำงานเริ่มต้น
 initApp();
-// ฟังก์ชันบันทึกประวัติการทำงานอัตโนมัติลง Firebase
-async function saveAutomationLogToFirebase(message) {
-  if (!db) return;
-
-  const logEntry = {
-    message: message,           // เช่น 'สลับแหล่งพลังงานอัตโนมัติเป็นโซลาร์เซลล์'
-    timestamp: new Date().toISOString()
-  };
-
-  try {
-    await db.collection("automation_logs").add(logEntry);
-    console.log("บันทึกประวัติอัตโนมัติสำเร็จ:", message);
-  } catch (error) {
-    console.error("บันทึกประวัติอัตโนมัติล้มเหลว: ", error);
-  }
-}
