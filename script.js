@@ -72,48 +72,37 @@ function initRooms() {
 }
 
 // Initialize SDK
+// Initialize SDK และระบบต่างๆ
 async function initApp() {
   initRooms();
   
-  if (window.elementSdk) {
-    window.elementSdk.init({
-      defaultConfig,
-      onConfigChange: async (config) => {
-        document.getElementById('building-title').textContent = config.building_name || defaultConfig.building_name;
-      },
-      mapToCapabilities: (config) => ({
-        recolorables: [
-          {
-            get: () => config.primary_color || defaultConfig.primary_color,
-            set: (value) => window.elementSdk.setConfig({ primary_color: value })
-          },
-          {
-            get: () => config.secondary_color || defaultConfig.secondary_color,
-            set: (value) => window.elementSdk.setConfig({ secondary_color: value })
-          },
-          {
-            get: () => config.text_color || defaultConfig.text_color,
-            set: (value) => window.elementSdk.setConfig({ text_color: value })
-          },
-          {
-            get: () => config.accent_color || defaultConfig.accent_color,
-            set: (value) => window.elementSdk.setConfig({ accent_color: value })
-          },
-          {
-            get: () => config.surface_color || defaultConfig.surface_color,
-            set: (value) => window.elementSdk.setConfig({ surface_color: value })
-          }
-        ],
-        borderables: [],
-        fontEditable: undefined,
-        fontSizeable: undefined
-      }),
-      mapToEditPanelValues: (config) => new Map([
-        ['building_name', config.building_name || defaultConfig.building_name],
-        ['electricity_rate', config.electricity_rate || defaultConfig.electricity_rate]
-      ])
+  // Start clock
+  updateClock();
+  setInterval(updateClock, 1000);
+  
+  // Render initial state
+  renderBlueprint();
+  renderSolarPanels();
+  renderAutomationLogs();
+  updateDashboardStats();
+  
+  // Simulate real-time updates
+  setInterval(simulateRealTimeUpdates, 5000);
+
+  // ดึงข้อมูลประวัติจาก Firebase แบบ Real-time
+  try {
+    db.collection("history").onSnapshot((querySnapshot) => {
+      const data = [];
+      querySnapshot.forEach((doc) => {
+        data.push(doc.data());
+      });
+      appState.historyData = data;
+      renderHistory();
     });
+  } catch (error) {
+    console.error("Firebase load error:", error);
   }
+}
 
   if (window.dataSdk) {
     const result = await window.dataSdk.init({
