@@ -14,6 +14,63 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body class="h-full bg-slate-950 text-white overflow-auto">
+  <div id="auth-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 backdrop-blur-lg transition-all duration-500">
+  <div class="glass p-8 rounded-2xl neon-border max-w-md w-full mx-4 bg-slate-900/50 shadow-2xl">
+    
+    <div id="login-view" class="space-y-6">
+      <div class="text-center">
+        <div class="text-4xl mb-2">🔐</div>
+        <h2 class="orbitron text-2xl font-bold text-emerald-400">ADMIN LOGIN</h2>
+        <p class="text-sm text-slate-400">เข้าสู่ระบบเพื่อควบคุม SMART BUILDING</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-slate-400 mb-1 font-medium">อีเมลแอดมิน</label>
+          <input type="email" id="login-email" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-emerald-500 outline-none transition-all" placeholder="admin@building.com">
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1 font-medium">รหัสผ่าน</label>
+          <input type="password" id="login-password" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-emerald-500 outline-none transition-all" placeholder="••••••••">
+        </div>
+        
+        <button onclick="handleLogin()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-bold hover:opacity-90 transition-all shadow-lg shadow-emerald-500/20">เข้าสู่ระบบ</button>
+        
+        <p class="text-center text-sm text-slate-500 pt-2">
+          ยังไม่มีบัญชีแอดมิน? 
+          <a href="javascript:void(0)" onclick="toggleAuthMode(true)" class="text-emerald-400 hover:underline">สมัครสมาชิก</a>
+        </p>
+      </div>
+    </div>
+
+    <div id="register-view" class="hidden space-y-6">
+      <div class="text-center">
+        <div class="text-4xl mb-2">➕</div>
+        <h2 class="orbitron text-2xl font-bold text-cyan-400">REGISTER</h2>
+        <p class="text-sm text-slate-400">สร้างบัญชีผู้ดูแลระบบใหม่</p>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm text-slate-400 mb-1 font-medium">อีเมล</label>
+          <input type="email" id="reg-email" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-cyan-500 outline-none transition-all">
+        </div>
+        <div>
+          <label class="block text-sm text-slate-400 mb-1 font-medium">ตั้งรหัสผ่าน (6 ตัวขึ้นไป)</label>
+          <input type="password" id="reg-password" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:border-cyan-500 outline-none transition-all">
+        </div>
+        
+        <button onclick="handleRegister()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold hover:opacity-90 transition-all shadow-lg shadow-cyan-500/20">ยืนยันการสมัคร</button>
+        
+        <p class="text-center text-sm text-slate-500 pt-2">
+          มีบัญชีอยู่แล้ว? 
+          <a href="javascript:void(0)" onclick="toggleAuthMode(false)" class="text-cyan-400 hover:underline">กลับไปเข้าสู่ระบบ</a>
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
   <div id="app" class="min-h-full w-full">
     <header class="glass sticky top-0 z-50 px-6 py-4">
       <div class="max-w-7xl mx-auto flex items-center justify-between">
