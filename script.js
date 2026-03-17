@@ -425,16 +425,6 @@ function renderHistory() {
 
 // Save Current Record
 async function saveCurrentRecord() {
-  if (!window.dataSdk) {
-    showToast('❌', 'ไม่สามารถบันทึกข้อมูลได้');
-    return;
-  }
-
-  if (appState.historyData.length >= 999) {
-    showToast('⚠️', 'ถึงขีดจำกัด 999 รายการแล้ว กรุณาลบข้อมูลเก่าก่อน');
-    return;
-  }
-
   const btn = document.getElementById('save-btn');
   btn.disabled = true;
   btn.textContent = '⏳ กำลังบันทึก...';
@@ -448,6 +438,20 @@ async function saveCurrentRecord() {
     total_cost: appState.todayStats.totalCost,
     solar_savings: appState.todayStats.solarSavings
   };
+
+  try {
+    // ส่งข้อมูลไปบันทึกที่ Firebase ในห้องที่ชื่อว่า "history"
+    await db.collection("history").add(record);
+    showToast('✅', 'บันทึกข้อมูลลง Firebase สำเร็จ!');
+    addAutomationLog('บันทึกข้อมูลการใช้ไฟฟ้าลงฐานข้อมูล');
+  } catch (error) {
+    console.error("Error adding document: ", error);
+    showToast('❌', 'เกิดข้อผิดพลาดในการบันทึก');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 บันทึกข้อมูล';
+  }
+}
 
   const result = await window.dataSdk.create(record);
   
