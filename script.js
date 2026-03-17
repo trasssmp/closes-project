@@ -400,20 +400,45 @@ async function saveLightLog(actionType, detailText) {
 // ==========================================
 // ระบบ Login / Logout
 // ==========================================
+// สลับโหมด ล็อคอิน / สมัครสมาชิก
+function toggleAuthMode(isRegister) {
+  document.getElementById('auth-title').innerText = isRegister ? 'REGISTER' : 'ADMIN LOGIN';
+  document.getElementById('login-group').classList.toggle('hidden', isRegister);
+  document.getElementById('register-group').classList.toggle('hidden', !isRegister);
+}
+
+// ฟังก์ชันสมัครสมาชิก
+async function handleRegister() {
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
+  
+  if(password.length < 6) {
+    showToast('⚠️', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+    return;
+  }
+
+  try {
+    await auth.createUserWithEmailAndPassword(email, password);
+    showToast('✅', 'สมัครสมาชิกสำเร็จและเข้าสู่ระบบแล้ว!');
+  } catch (error) {
+    console.error(error);
+    showToast('❌', 'สมัครสมาชิกไม่สำเร็จ: ' + error.message);
+  }
+}
+
+// ฟังก์ชันเข้าสู่ระบบ (ปรับปรุงไอดี input ให้ตรงกัน)
 async function handleLogin() {
-  const email = document.getElementById('login-email').value;
-  const password = document.getElementById('login-password').value;
+  const email = document.getElementById('auth-email').value;
+  const password = document.getElementById('auth-password').value;
   
   if(!email || !password) {
-    showToast('⚠️', 'กรุณากรอกอีเมลและรหัสผ่าน');
+    showToast('⚠️', 'กรุณากรอกข้อมูลให้ครบ');
     return;
   }
 
   try {
     await auth.signInWithEmailAndPassword(email, password);
     showToast('✅', 'เข้าสู่ระบบสำเร็จ!');
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-password').value = '';
   } catch (error) {
     console.error(error);
     showToast('❌', 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
@@ -427,17 +452,14 @@ function handleLogout() {
   }
 }
 
-// ตัวตรวจสอบว่าใคร Login อยู่
+// เช็คสถานะการล็อคอิน
 if (auth) {
   auth.onAuthStateChanged((user) => {
     const loginScreen = document.getElementById('login-screen');
-    // ตรวจสอบว่ามีหน้าต่าง login-screen ใน HTML หรือยัง
     if (loginScreen) {
       if (user) {
-        // ล็อคอินแล้ว -> ซ่อนหน้า Login
         loginScreen.classList.add('opacity-0', 'pointer-events-none');
       } else {
-        // ยังไม่ล็อคอิน -> โชว์หน้า Login บังเว็บไว้
         loginScreen.classList.remove('opacity-0', 'pointer-events-none');
       }
     }
