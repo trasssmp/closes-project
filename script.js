@@ -481,7 +481,7 @@ async function saveLightLog(actionType, detailText) {
   }
 }
 // โหลดการทำงานเริ่มต้น
-initApp();
+
 async function saveAutomationLogToFirebase(message) {
   if (!db) return; // ถ้าเชื่อมต่อ Firebase ไม่ติดให้หยุดทำงาน
 
