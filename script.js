@@ -8,9 +8,16 @@ const firebaseConfig = {
   appId: "ใส่ของคุณ"
 };
 
-// เริ่มต้น Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+let db = null; // สร้างตัวแปรฐานข้อมูลรอไว้
+
+// ใช้ try...catch ดักจับ Error ไม่ให้เว็บพัง
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  console.log("🔥 Firebase เชื่อมต่อสำเร็จ!");
+} catch (error) {
+  console.error("❌ Firebase เชื่อมต่อไม่ได้ (เช็ค Config):", error);
+}
 
 // === 2. โค้ดการทำงานของเว็บ ===
 const defaultConfig = {
@@ -50,17 +57,19 @@ function initRooms() {
 function initApp() {
   initRooms();
   
-  // ดึงข้อมูลประวัติจาก Firebase
-  db.collection("history").onSnapshot((querySnapshot) => {
-    const data = [];
-    querySnapshot.forEach((doc) => {
-      data.push(doc.data());
+  // ถ้าเชื่อมต่อ Firebase สำเร็จ ถึงจะดึงข้อมูล
+  if (db) {
+    db.collection("history").onSnapshot((querySnapshot) => {
+      const data = [];
+      querySnapshot.forEach((doc) => {
+        data.push(doc.data());
+      });
+      appState.historyData = data;
+      renderHistory();
+    }, (error) => {
+      console.error("Firebase Snapshot Error:", error);
     });
-    appState.historyData = data;
-    renderHistory();
-  }, (error) => {
-    console.error("Firebase Snapshot Error:", error);
-  });
+  }
 
   updateClock();
   setInterval(updateClock, 1000);
@@ -280,12 +289,19 @@ function renderHistory() {
 
 async function saveCurrentRecord() {
   const btn = document.getElementById('save-btn');
+  
+  if (!db) {
+    showToast('❌', 'เซิร์ฟเวอร์ฐานข้อมูลยังไม่พร้อมใช้งาน!');
+    return;
+  }
+
   btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
   const record = {
     type: 'daily', date: new Date().toISOString(),
     solar_kwh: appState.todayStats.solarKwh, grid_kwh: appState.todayStats.gridKwh,
     total_cost: appState.todayStats.totalCost, solar_savings: appState.todayStats.solarSavings
   };
+  
   try {
     await db.collection("history").add(record);
     showToast('✅', 'บันทึกข้อมูลลง Firebase สำเร็จ!');
