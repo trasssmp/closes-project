@@ -92,6 +92,9 @@ function toggleEnergySource() {
   const gridIndicator = document.getElementById('grid-indicator');
   const sourceLabel = document.getElementById('source-label');
   
+  // สร้างข้อความสำหรับบันทึก Log
+  const logMessage = `สลับแหล่งพลังงานเป็น: ${appState.usingSolar ? 'โซลาร์เซลล์' : 'ไฟฟ้าจากรัฐ'}`;
+  
   if (appState.usingSolar) {
     toggle.classList.remove('bg-blue-500'); toggle.classList.add('bg-yellow-500');
     toggle.style.boxShadow = '0 0 20px rgba(234, 179, 8, 0.5)';
@@ -105,10 +108,13 @@ function toggleEnergySource() {
     solarIndicator.classList.add('opacity-50'); gridIndicator.classList.remove('opacity-50');
     gridIndicator.classList.add('border-blue-500', 'bg-blue-500/10'); sourceLabel.textContent = 'กำลังใช้: ไฟฟ้าจากรัฐ';
   }
-  showToast(appState.usingSolar ? '☀️' : '🏭', `สลับไปใช้${appState.usingSolar ? 'โซลาร์เซลล์' : 'ไฟฟ้าจากรัฐ'}แล้ว`);
-  addAutomationLog(`สลับแหล่งพลังงานเป็น${appState.usingSolar ? 'โซลาร์เซลล์' : 'ไฟฟ้าจากรัฐ'}`);
-}
 
+  // --- แสดงผลบนหน้าจอและส่งไป Firebase ---
+  showToast(appState.usingSolar ? '☀️' : '🏭', logMessage);
+  
+  // เรียกใช้ฟังก์ชันบันทึก Log (ที่รวมการส่งไป Firebase ไว้ข้างในแล้ว)
+  addAutomationLog(logMessage);
+}
 function selectFloor(floor) {
   appState.currentFloor = floor;
   document.querySelectorAll('.floor-btn').forEach((btn, index) => {
@@ -232,9 +238,14 @@ function updateSolarThreshold() { appState.solarThreshold = parseInt(document.ge
 function addAutomationLog(message) {
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH');
+  
+  // แสดงบนหน้าเว็บ (UI)
   appState.automationLogs.unshift({ time, message });
   if (appState.automationLogs.length > 20) appState.automationLogs.pop();
   renderAutomationLogs();
+
+  // ส่งไปเก็บที่ Firebase Collection "automation_logs"
+  saveAutomationLogToFirebase(message);
 }
 
 function renderAutomationLogs() {
