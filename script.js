@@ -238,14 +238,12 @@ function updateSolarThreshold() { appState.solarThreshold = parseInt(document.ge
 function addAutomationLog(message) {
   const now = new Date();
   const time = now.toLocaleTimeString('th-TH');
-  
-  // แสดงบนหน้าเว็บ (UI)
   appState.automationLogs.unshift({ time, message });
   if (appState.automationLogs.length > 20) appState.automationLogs.pop();
   renderAutomationLogs();
 
-  // ส่งไปเก็บที่ Firebase Collection "automation_logs"
-  saveAutomationLogToFirebase(message);
+  // --- แก้ไขจุดนี้: เรียกใช้ฟังก์ชันบันทึก Firebase ---
+  saveAutomationLogToFirebase(message); 
 }
 
 function renderAutomationLogs() {
@@ -392,3 +390,19 @@ async function saveLightLog(actionType, detailText) {
 }
 // โหลดการทำงานเริ่มต้น
 initApp();
+async function saveAutomationLogToFirebase(message) {
+  if (!db) return; // ถ้าเชื่อมต่อ Firebase ไม่ติดให้หยุดทำงาน
+
+  const logEntry = {
+    message: message,
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    // คำสั่งนี้จะสร้าง Collection "automation_logs" ให้เองอัตโนมัติเมื่อมีการส่งครั้งแรก
+    await db.collection("automation_logs").add(logEntry);
+    console.log("บันทึก Automation Log สำเร็จ");
+  } catch (error) {
+    console.error("บันทึก Automation Log ล้มเหลว:", error);
+  }
+}
