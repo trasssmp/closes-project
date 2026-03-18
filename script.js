@@ -12,74 +12,21 @@ const firebaseConfig = {
 // เริ่มต้น Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-const auth = firebase.auth();
 
-// === 2. ระบบ Login / Register ด้วยเลขประจำตัว ===
-const getFakeEmail = (id) => `${id}@smartbuilding.com`;
-const DEFAULT_PW = "sb123456"; 
-
-function toggleAuthMode(isRegister) {
-  document.getElementById('auth-title').innerText = isRegister ? 'REGISTER ID' : 'STUDENT LOGIN';
-  document.getElementById('login-group').classList.toggle('hidden', isRegister);
-  document.getElementById('register-group').classList.toggle('hidden', !isRegister);
-}
-
-async function handleRegister() {
-  const studentId = document.getElementById('auth-student-id').value.trim();
-  if(!studentId) return showToast('⚠️', 'กรุณาระบุเลขประจำตัว');
-  const fakeEmail = getFakeEmail(studentId);
-  try {
-    await auth.createUserWithEmailAndPassword(fakeEmail, DEFAULT_PW);
-    showToast('✅', 'ลงทะเบียนสำเร็จ!');
-    if(db) await db.collection("users").doc(studentId).set({
-        studentId: studentId,
-        registeredAt: new Date().toISOString()
-    });
-  } catch (e) {
-    showToast('❌', 'เลขประจำตัวนี้มีในระบบแล้ว หรือเกิดข้อผิดพลาด');
-  }
-}
-
-async function handleLogin() {
-  const studentId = document.getElementById('auth-student-id').value.trim();
-  if(!studentId) return showToast('⚠️', 'กรุณากรอกเลขประจำตัว');
-  const fakeEmail = getFakeEmail(studentId);
-  try {
-    await auth.signInWithEmailAndPassword(fakeEmail, DEFAULT_PW);
-    showToast('✅', 'ยินดีต้อนรับ รหัส ' + studentId);
-  } catch (e) {
-    showToast('❌', 'ไม่พบเลขประจำตัวนี้ในระบบ');
-  }
-}
-
-function handleLogout() {
-  if(auth) auth.signOut();
-}
-
-// ตัวเฝ้าดูสถานะการ Login (หัวใจสำคัญ)
-if (auth) {
-  auth.onAuthStateChanged((user) => {
-    const authScreen = document.getElementById('auth-screen');
-    const app = document.getElementById('app');
-    if (user) {
-      authScreen.classList.add('opacity-0', 'pointer-events-none');
-      app.classList.remove('opacity-0', 'pointer-events-none');
-      initApp(); // รันแอปหลักเมื่อ Login ผ่านแล้ว
-    } else {
-      authScreen.classList.remove('opacity-0', 'pointer-events-none');
-      app.classList.add('opacity-0', 'pointer-events-none');
-    }
-  });
-}
-
-// === 3. โค้ดการทำงานของเว็บ (แอปหลัก) ===
-const defaultConfig = { building_name: 'SMART BUILDING', electricity_rate: '4.50' };
+// === 2. โค้ดการทำงานของเว็บ ===
+const defaultConfig = {
+  building_name: 'SMART BUILDING',
+  electricity_rate: '4.50'
+};
 
 let appState = {
   usingSolar: true,
   currentFloor: 1,
   rooms: {},
   automationSettings: { motion: true, schedule: true, solar: true, alert: true },
+  motionTimeout: 10,
+  scheduleTime: '22:00',
+  solarThreshold: 2,
   automationLogs: [],
   historyFilter: 'all',
   historyData: [],
@@ -104,40 +51,26 @@ function initRooms() {
 function initApp() {
   initRooms();
   
-  // ดึงข้อมูลประวัติค่าไฟ
+  // ดึงข้อมูลประวัติจาก Firebase
   db.collection("history").onSnapshot((querySnapshot) => {
     const data = [];
-    querySnapshot.forEach((doc) => { data.push(doc.data()); });
+    querySnapshot.forEach((doc) => {
+      data.push(doc.data());
+    });
     appState.historyData = data;
     renderHistory();
-  }, (error) => { console.error("Firebase Snapshot Error:", error); });
-
-  // ดึงข้อมูล Automation Logs จาก Firebase
-  if (db) {
-    db.collection("automation_logs")
-      .orderBy("timestamp", "desc")
-      .limit(10)
-      .onSnapshot((querySnapshot) => {
-        const logs = [];
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          const time = new Date(data.timestamp).toLocaleTimeString('th-TH');
-          logs.push({ time: time, message: data.message });
-        });
-        appState.automationLogs = logs;
-        renderAutomationLogs();
-      });
-  }
+  }, (error) => {
+    console.error("Firebase Snapshot Error:", error);
+  });
 
   updateClock();
   setInterval(updateClock, 1000);
   renderBlueprint();
   renderSolarPanels();
+  renderAutomationLogs();
   updateDashboardStats();
   setInterval(simulateRealTimeUpdates, 5000);
 }
-
-// --- ฟังก์ชันช่วยเหลืออื่นๆ (เหมือนเดิมของคุณทั้งหมด) ---
 
 function switchTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -158,6 +91,8 @@ function toggleEnergySource() {
   const solarIndicator = document.getElementById('solar-indicator');
   const gridIndicator = document.getElementById('grid-indicator');
   const sourceLabel = document.getElementById('source-label');
+  
+  // สร้างข้อความสำหรับบันทึก Log
   const logMessage = `สลับแหล่งพลังงานเป็น: ${appState.usingSolar ? 'โซลาร์เซลล์' : 'ไฟฟ้าจากรัฐ'}`;
   
   if (appState.usingSolar) {
@@ -173,10 +108,13 @@ function toggleEnergySource() {
     solarIndicator.classList.add('opacity-50'); gridIndicator.classList.remove('opacity-50');
     gridIndicator.classList.add('border-blue-500', 'bg-blue-500/10'); sourceLabel.textContent = 'กำลังใช้: ไฟฟ้าจากรัฐ';
   }
+
+  // --- แสดงผลบนหน้าจอและส่งไป Firebase ---
   showToast(appState.usingSolar ? '☀️' : '🏭', logMessage);
+  
+  // เรียกใช้ฟังก์ชันบันทึก Log (ที่รวมการส่งไป Firebase ไว้ข้างในแล้ว)
   addAutomationLog(logMessage);
 }
-
 function selectFloor(floor) {
   appState.currentFloor = floor;
   document.querySelectorAll('.floor-btn').forEach((btn, index) => {
@@ -216,9 +154,14 @@ function toggleRoom(roomId) {
   if (room) {
     room.isOn = !room.isOn; room.isForgotten = false;
     renderBlueprint();
+    
+    // ข้อความประวัติ
     const detailText = `${room.isOn ? 'เปิด' : 'ปิด'}ไฟ ${room.name} ชั้น ${floor}`;
+    
     showToast(room.isOn ? '💡' : '🌙', detailText + 'แล้ว');
     addAutomationLog(detailText);
+    
+    // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
     saveLightLog(room.isOn ? 'TURN_ON' : 'TURN_OFF', detailText);
   }
 }
@@ -226,18 +169,24 @@ function toggleRoom(roomId) {
 function turnAllLightsOn() {
   appState.rooms[appState.currentFloor].forEach(room => { room.isOn = true; room.isForgotten = false; });
   renderBlueprint(); 
+  
   const detailText = `เปิดไฟทั้งหมดชั้น ${appState.currentFloor}`;
   showToast('💡', detailText + ` แล้ว`);
   addAutomationLog(detailText);
+
+  // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
   saveLightLog('ALL_ON', detailText);
 }
 
 function turnAllLightsOff() {
   appState.rooms[appState.currentFloor].forEach(room => { room.isOn = false; room.isForgotten = false; });
   renderBlueprint(); 
+  
   const detailText = `ปิดไฟทั้งหมดชั้น ${appState.currentFloor}`;
   showToast('🌙', detailText + ` แล้ว`);
   addAutomationLog(detailText);
+
+  // ---> สั่งส่งข้อมูลเข้า Firebase ตรงนี้ <---
   saveLightLog('ALL_OFF', detailText);
 }
 
@@ -258,12 +207,42 @@ function renderSolarPanels() {
   const panels = [];
   for (let i = 1; i <= 12; i++) {
     const efficiency = 85 + Math.floor(Math.random() * 15);
-    panels.push(`<div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-center"><div class="text-2xl mb-1">☀️</div><div class="text-xs text-slate-400">แผง ${i}</div></div>`);
+    panels.push(`
+      <div class="p-3 rounded-lg ${efficiency > 90 ? 'bg-emerald-500/20 border border-emerald-500/50' : 'bg-yellow-500/10 border border-yellow-500/30'} text-center">
+        <div class="text-2xl mb-1">☀️</div>
+        <div class="text-xs text-slate-400">แผง ${i}</div>
+        <div class="text-sm font-medium ${efficiency > 90 ? 'text-emerald-400' : 'text-yellow-400'}">${efficiency}%</div>
+      </div>
+    `);
   }
   container.innerHTML = panels.join('');
 }
 
+function toggleAutomation(type) {
+  appState.automationSettings[type] = !appState.automationSettings[type];
+  const btn = document.getElementById(`auto-${type}`);
+  const knob = btn.querySelector('div');
+  if (appState.automationSettings[type]) {
+    btn.classList.remove('bg-slate-600'); btn.classList.add('bg-emerald-500');
+    knob.style.right = '4px'; knob.style.left = 'auto';
+  } else {
+    btn.classList.remove('bg-emerald-500'); btn.classList.add('bg-slate-600');
+    knob.style.left = '4px'; knob.style.right = 'auto';
+  }
+}
+
+function updateMotionTimeout() { appState.motionTimeout = parseInt(document.getElementById('motion-timeout').value); showToast('⏱️', `ตั้งเวลาเป็น ${appState.motionTimeout} นาที`); }
+function updateScheduleTime() { appState.scheduleTime = document.getElementById('schedule-time').value; showToast('🕐', `ตั้งเวลาเป็น ${appState.scheduleTime} น.`); }
+function updateSolarThreshold() { appState.solarThreshold = parseInt(document.getElementById('solar-threshold').value); showToast('☀️', `ตั้งค่าสลับโซลาร์เป็น ${appState.solarThreshold} kW`); }
+
 function addAutomationLog(message) {
+  const now = new Date();
+  const time = now.toLocaleTimeString('th-TH');
+  appState.automationLogs.unshift({ time, message });
+  if (appState.automationLogs.length > 20) appState.automationLogs.pop();
+  renderAutomationLogs();
+
+  // --- แก้ไขจุดนี้: เรียกใช้ฟังก์ชันบันทึก Firebase ---
   saveAutomationLogToFirebase(message); 
 }
 
@@ -280,22 +259,74 @@ function renderAutomationLogs() {
   `).join('');
 }
 
+function filterHistory(filter) {
+  appState.historyFilter = filter;
+  document.querySelectorAll('#content-history .flex.gap-2 button').forEach(btn => {
+    btn.classList.remove('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+    btn.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700');
+  });
+  document.getElementById(`filter-${filter}`).classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700');
+  document.getElementById(`filter-${filter}`).classList.add('bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/50');
+  renderHistory();
+}
+
 function renderHistory() {
   const table = document.getElementById('history-table');
-  table.innerHTML = appState.historyData.sort((a, b) => new Date(b.date) - new Date(a.date)).map(record => `
-    <tr class="border-b border-slate-800">
-      <td class="py-3 px-4 text-white">${new Date(record.date).toLocaleDateString('th-TH')}</td>
-      <td class="py-3 px-4 text-right text-yellow-400">${record.solar_kwh.toFixed(2)}</td>
-      <td class="py-3 px-4 text-right text-blue-400">${record.grid_kwh.toFixed(2)}</td>
-      <td class="py-3 px-4 text-right text-red-400">${record.total_cost.toFixed(2)} ฿</td>
-      <td class="py-3 px-4 text-right text-emerald-400">${record.solar_savings.toFixed(2)} ฿</td>
-    </tr>
-  `).join('');
+  const noHistory = document.getElementById('no-history');
+  let data = [...appState.historyData];
+  
+  if (appState.historyFilter === 'week') {
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+    data = data.filter(d => new Date(d.date) >= weekAgo);
+  } else if (appState.historyFilter === 'month') {
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30);
+    data = data.filter(d => new Date(d.date) >= monthAgo);
+  }
+  
+  if (data.length === 0) {
+    table.innerHTML = ''; noHistory.classList.remove('hidden');
+  } else {
+    noHistory.classList.add('hidden');
+    table.innerHTML = data.sort((a, b) => new Date(b.date) - new Date(a.date)).map(record => `
+      <tr class="border-b border-slate-800 hover:bg-slate-800/30">
+        <td class="py-3 px-4 text-white">${new Date(record.date).toLocaleDateString('th-TH')}</td>
+        <td class="py-3 px-4 text-right text-yellow-400">${record.solar_kwh.toFixed(2)}</td>
+        <td class="py-3 px-4 text-right text-blue-400">${record.grid_kwh.toFixed(2)}</td>
+        <td class="py-3 px-4 text-right text-red-400">${record.total_cost.toFixed(2)} ฿</td>
+        <td class="py-3 px-4 text-right text-emerald-400">${record.solar_savings.toFixed(2)} ฿</td>
+      </tr>
+    `).join('');
+  }
+  
+  const totalSolar = data.reduce((sum, d) => sum + d.solar_kwh, 0);
+  const totalGrid = data.reduce((sum, d) => sum + d.grid_kwh, 0);
+  const totalCost = data.reduce((sum, d) => sum + d.total_cost, 0);
+  const totalSavings = data.reduce((sum, d) => sum + d.solar_savings, 0);
+  
+  document.getElementById('total-solar').textContent = `${totalSolar.toFixed(1)} kWh`;
+  document.getElementById('total-grid').textContent = `${totalGrid.toFixed(1)} kWh`;
+  document.getElementById('total-cost').textContent = `${totalCost.toFixed(0)} บาท`;
+  document.getElementById('total-savings').textContent = `${totalSavings.toFixed(0)} บาท`;
 }
 
 async function saveCurrentRecord() {
-  const record = { type: 'daily', date: new Date().toISOString(), solar_kwh: appState.todayStats.solarKwh, grid_kwh: appState.todayStats.gridKwh, total_cost: appState.todayStats.totalCost, solar_savings: appState.todayStats.solarSavings };
-  try { await db.collection("history").add(record); showToast('✅', 'บันทึกสำเร็จ!'); } catch (e) { showToast('❌', 'ผิดพลาด'); }
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  const record = {
+    type: 'daily', date: new Date().toISOString(),
+    solar_kwh: appState.todayStats.solarKwh, grid_kwh: appState.todayStats.gridKwh,
+    total_cost: appState.todayStats.totalCost, solar_savings: appState.todayStats.solarSavings
+  };
+  try {
+    await db.collection("history").add(record);
+    showToast('✅', 'บันทึกข้อมูลลง Firebase สำเร็จ!');
+    addAutomationLog('บันทึกข้อมูลการใช้ไฟฟ้าลงฐานข้อมูล');
+  } catch (error) {
+    console.error("Error adding document: ", error);
+    showToast('❌', 'เกิดข้อผิดพลาดในการบันทึก');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 บันทึกข้อมูล';
+  }
 }
 
 function updateDashboardStats() {
@@ -306,12 +337,28 @@ function updateDashboardStats() {
 }
 
 function simulateRealTimeUpdates() {
-  appState.todayStats.solarKwh += 0.001;
+  const solarPower = (3.5 + Math.random() * 1.5).toFixed(1);
+  document.getElementById('solar-power').textContent = `${solarPower} kW`;
+  document.getElementById('current-generation').textContent = `${solarPower} kW`;
+  const buildingUsage = (3.0 + Math.random() * 1.5).toFixed(1);
+  document.getElementById('building-usage').textContent = `${buildingUsage} kW`;
+  const batteryLevel = 80 + Math.floor(Math.random() * 15);
+  document.getElementById('battery-level').textContent = `${batteryLevel}%`;
+  document.getElementById('battery-percent').textContent = `${batteryLevel}%`;
+  document.getElementById('battery-fill').style.height = `${batteryLevel}%`;
+  document.getElementById('battery-remaining').textContent = `${(batteryLevel * 0.5).toFixed(1)} kWh`;
+  
+  appState.todayStats.solarKwh += parseFloat(solarPower) * (5/3600);
+  appState.todayStats.gridKwh += Math.max(0, parseFloat(buildingUsage) - parseFloat(solarPower)) * (5/3600);
+  const rate = parseFloat(defaultConfig.electricity_rate);
+  appState.todayStats.totalCost = appState.todayStats.gridKwh * rate;
+  appState.todayStats.solarSavings = appState.todayStats.solarKwh * rate;
   updateDashboardStats();
 }
 
 function updateClock() {
-  document.getElementById('current-time').textContent = new Date().toLocaleTimeString('th-TH');
+  const now = new Date();
+  document.getElementById('current-time').textContent = now.toLocaleTimeString('th-TH');
 }
 
 function showToast(icon, message) {
@@ -319,13 +366,43 @@ function showToast(icon, message) {
   document.getElementById('toast-icon').textContent = icon;
   document.getElementById('toast-message').textContent = message;
   toast.classList.remove('translate-y-20', 'opacity-0'); toast.classList.add('translate-y-0', 'opacity-100');
-  setTimeout(() => { toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+  setTimeout(() => {
+    toast.classList.remove('translate-y-0', 'opacity-100'); toast.classList.add('translate-y-20', 'opacity-0');
+  }, 3000);
 }
+// ฟังก์ชันสำหรับส่งประวัติการเปิด-ปิดไฟเข้า Firebase
+async function saveLightLog(actionType, detailText) {
+  if (!db) return; // ถ้า Database ยังไม่พร้อมให้ข้ามไปก่อน
 
-async function saveLightLog(type, detail) {
-  if (db) await db.collection("light_logs").add({ type, detail, timestamp: new Date().toISOString() });
+  const logEntry = {
+    type: actionType,       // เช่น 'TURN_ON', 'TURN_OFF', 'ALL_ON'
+    detail: detailText,     // เช่น 'เปิดไฟ ออฟฟิศ A ชั้น 1'
+    timestamp: new Date().toISOString() // เวลาที่กด (ปี-เดือน-วัน T เวลา)
+  };
+
+  try {
+    // ส่งไปเก็บใน Collection ใหม่ที่ชื่อว่า "light_logs"
+    await db.collection("light_logs").add(logEntry);
+    console.log("บันทึกประวัติไฟสำเร็จ:", detailText);
+  } catch (error) {
+    console.error("บันทึกประวัติไฟล้มเหลว: ", error);
+  }
 }
-
+// โหลดการทำงานเริ่มต้น
+initApp();
 async function saveAutomationLogToFirebase(message) {
-  if (db) await db.collection("automation_logs").add({ message, timestamp: new Date().toISOString() });
+  if (!db) return; // ถ้าเชื่อมต่อ Firebase ไม่ติดให้หยุดทำงาน
+
+  const logEntry = {
+    message: message,
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    // คำสั่งนี้จะสร้าง Collection "automation_logs" ให้เองอัตโนมัติเมื่อมีการส่งครั้งแรก
+    await db.collection("automation_logs").add(logEntry);
+    console.log("บันทึก Automation Log สำเร็จ");
+  } catch (error) {
+    console.error("บันทึก Automation Log ล้มเหลว:", error);
+  }
 }
